@@ -1,0 +1,310 @@
+<html>
+    <head>
+        <title>Soundify</title>
+        <script type="text/javascript" src="jquery.js"></script>
+        <script type="text/javascript" src="sync.js"></script>
+        <script type="text/javascript" src="progressBar.js"></script>
+        <link rel="stylesheet" type="text/css" media="screen" href="style.css">
+    </head>
+    <body>
+        <div class="header"><div class="header-body">
+            <h1 class="logo"></h1>
+            <h2>Make huge rivers out of little brooks</h2>
+            <div class="caption">Computers and phones<br /> playing the same track<br /> at the same time to play<br /> loud music&hellip; everywhere</div>
+        </div></div>
+        <div class="body">
+            <h1>Join a playground</h1>
+            <ul class="playlists"></ul>
+            <div class="create">
+                <input type="text" name="create" value="Create your playlist..." class="field" id="create-playlist" />
+            </div>
+        </div>
+        <div class="logs">
+            
+            <div class="progress-bar" id="audio-progress">
+                <div class="label"></div>
+                <div class="cursor"></div>
+            </div>
+            <div class="progress-bar" id="synchro-progress">
+                <div class="label"></div>
+                <div class="cursor"></div>
+            </div>
+            <div class="progress-bar" id="startplaying-progress">
+                <div class="label"></div>
+                <div class="cursor"></div>
+            </div>
+            <p><input type="button" value="stop" id="stop" /></p>
+        </div>
+        <script type="text/javascript">
+
+            var audioContext = new window.webkitAudioContext();
+            var source = audioContext.createBufferSource();
+            source.connect(audioContext.destination);
+
+            function loadAudioBuffer(url, fileSize) {
+                // Load asynchronously
+                var request = new XMLHttpRequest();
+                request.open("GET", url, true);
+                request.responseType = "arraybuffer";
+
+                var progress = new ProgressBar($("#audio-progress"), "Loading audio file");
+
+                request.onload = function() {
+                    progress.setProgress(100);
+                    audioContext.decodeAudioData(request.response, function(buffer) {
+                        source.buffer = buffer;
+                    }, function(e) {
+                        progress.setLabel("An error occured (don't know what and why&hellip;)");
+                        progress.cursor.css("background-color", "red");
+                        progress.label.css("background-color", "red");
+                    });
+
+                    $(document).trigger("NTPReady");
+                };
+
+                request.onprogress=function(event) {
+                    if (fileSize > 0) {
+                        progress.setProgress(100 * event.loaded / fileSize);
+                    }
+                };
+
+                request.send();
+            }
+
+            var play = function(delay) {
+                source.noteOn(delay);
+            };
+
+            var stop = function() {
+                source.noteOff(0.0);
+            };
+            $('#stop').click(function() {
+                stop();
+            });
+
+            var hash = null;
+
+            var connection = function() {
+                $.ajax({
+                    url: '/connect',
+                    success: function(data) {
+                        hash = data;
+                        $(document).trigger("NTPReady");
+                    }
+                });
+            }
+
+            var startPlayingProgress = new ProgressBar($("#startplaying-progress"), "Start playing in <span class=\"time\">unknown</span> seconds");
+
+            var displayDelay = function(delay) {
+                var playAt = delay + (new Date()).getTime();
+                var intervalID = window.setInterval(function() {
+                    var t = playAt - (new Date()).getTime();
+                    if (t > 0) {
+                        startPlayingProgress.setProgress(100*(delay-t)/delay);
+                        var t = Math.floor(t / 10)/100;
+                        $('span.time').text(t);
+                        startPlayingProgress.setLabel("Start playing in <span class=\"time\">" + t + "</span> seconds");
+
+                    }
+                    else {
+                        //$('span.time').text("NOW !");
+                        startPlayingProgress.setProgress(100);
+                        startPlayingProgress.setLabel("Playing now !");
+                        window.clearInterval(intervalID);
+                    }
+                }, 20);
+            };
+
+            var isStarted = false;
+
+            var ntp = new NTP("/ntp");
+            var startPlayingAt = function(playAt) {
+                if (!isStarted) {
+                    isStarted = true;
+                    var time = new Date().getTime();
+                    var realTime = ntp.fixTime(time);
+                    //var playAt = (Math.round((realTime + 30000) / 60000)) * 60000;
+                    var delay = playAt - realTime;
+                    window.setTimeout(function() {source.noteOn(0.0)}, delay);
+                    displayDelay(delay);
+                }
+            };
+
+            var selectedPlaylist = null;
+            var currentRequest = null;
+            var selectPlaylist = function(start) {
+                if (hash != null) {
+                    console.log("selectPlaylist", selectedPlaylist);
+                    if (currentRequest) {
+                        currentRequest.abort();
+                    }
+                    currentRequest = $.ajax({
+                        url: "/join.json",
+                        dataType: 'json',
+                        data: {
+                            hash: hash,
+                            user: "toto",
+                            name: selectedPlaylist,
+                            start: start
+                        },
+                        success: function(data) {
+                            if (data != null) {
+                                populatePlaylists(data);
+                                var playlist = data[selectedPlaylist];
+                                if (playlist != null && playlist.startDate != null) {
+                                    startPlayingAt(playlist.startDate);
+                                }
+                                else {
+                                    window.setTimeout(selectPlaylist, 1000);
+                                }
+                            }
+                            else {
+                                window.setTimeout(selectPlaylist, 1000);
+                            }
+                        }
+                    });
+                }
+            };
+
+            var populatePlaylists = function(data) {
+                var playlistsContainer = $("ul.playlists");
+                playlistsContainer.empty();
+                for (var playlist in data) {
+                    var $li = $("<li>" + playlist + " (" + data[playlist].members.length + " listener" + (data[playlist].members.length > 1 ? "s" : "") + ")</li>");
+                    if (playlist == selectedPlaylist) {
+                        if (hash == data[playlist].master) {
+                            var startButton = $("<input type=\"button\" value=\"start\" />");
+                            startButton.click(function(event) {
+                                event.stopPropagation();
+                                selectPlaylist(true);
+                            });
+                            $li.append(startButton);
+                        }
+                        else {
+                            $li.append(" (wait for host to start)");
+                        }
+                        $li.addClass("selected");
+                    }
+                    $li.data("name", playlist);
+                    $li.click(function(event) {
+                        var $li = $(event.target);
+                        selectedPlaylist = $li.data("name");
+                        selectPlaylist();
+                    });
+                    playlistsContainer.append($li);
+                }
+                updatePlaylists();
+            };
+            
+            var updatePlaylists = function() {
+                if (selectedPlaylist == null) {
+                    window.setTimeout(getPlaylists, 1000);
+                }
+            };
+
+            var getPlaylists = function() {
+                $.ajax({
+                    url: "/pools.json",
+                    dataType: 'json',
+                    success: populatePlaylists
+                });
+            };
+
+            jQuery(document).ready(function(){
+                getPlaylists();
+                var input = $('input.field');
+                input.focus(function() {
+                    $(this).val("");
+                });
+                input.blur(function() {
+                    if ($(this).val() == "") {
+                        $(this).val("Create your playlist...");
+                    }
+                });
+
+                var createPlaylist = $('#create-playlist');
+                createPlaylist.keydown(function(e) {
+                    if(e.keyCode == 13) {
+                        name = createPlaylist.val();
+                        createPlaylist.val("");
+                        createPlaylist.blur();
+                        selectedPlaylist =  name;
+                        selectPlaylist();
+                    }
+                });
+                
+
+                var count = 0;
+                $(document).bind("NTPReady", function() {
+                    if (count++ == 2) {
+
+
+                        /*var time = new Date().getTime();
+                        var realTime = ntp.fixTime(time);
+                        var playAt = (Math.round((realTime + 30000) / 60000)) * 60000;
+                        var delay = playAt - realTime;
+                        //play(delay);
+                        window.setTimeout(function() {source.noteOn(0.0)}, delay);
+                        displayDelay(delay);*/
+
+                        //$('#timestamp').text(playAt);
+                        //$('#realtime').text(Date(playAt));
+                    }
+                });
+
+                var npdProgress = new ProgressBar($("#synchro-progress"), "Synchronisation with other users");
+                $(document).bind("NPDProgress", function(event, progress) {
+                    npdProgress.setProgress(progress);
+                });
+
+                ntp.sync(20);
+
+                loadAudioBuffer("ic-FvhU4c0Y.mp3", 4331047);
+
+                connection();
+                //loadAudioBuffer("song.ogg");
+
+
+                /*var t1 = new Date().getTime();
+                $.ajax({
+                    url: "/presync",
+                    success: function(delay) {     
+                        var t2 = new Date().getTime();
+                        displayDelay(parseInt(delay, 10));
+                        $.ajax({
+                            url: "/sync",
+                            data: {
+                                t: (t2 - t1) / 2
+                            },
+                            success: play 
+                        });      
+                    }
+                });*/
+
+                /*jQuery(document).bind("ntp-ready", function() {
+                    var time = new Date();
+                    var tmpTime = time.getTime();
+                    var realTime = NTP.fixTime(time.getTime());
+                    var playAt = (Math.floor((realTime + 60000) / 60000) + 1) * 60000;
+                    var delay = playAt - tmpTime;
+
+                    jQuery('#time').text((Math.floor(delay / 100)/10) + "s");
+                    jQuery('#timestamp').text(playAt);
+                    jQuery('#realtime').text(Date(playAt));
+                    window.setTimeout(play, delay);
+                    window.setInterval(function() {
+                        var t = playAt - (new Date()).getTime();
+                        if (t > 0) 
+                            jQuery('#time').text(Math.floor(t / 100)/10);
+                        else {
+                            jQuery('#time').text("NOW !");
+                        }
+                    }, 100);
+                });
+
+                NTP.sync();*/
+            });     
+        </script>
+    </body>
+</html>

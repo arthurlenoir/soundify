@@ -1,0 +1,153 @@
+body {
+    font-family: sans-serif;
+    width: 700px;
+    margin: auto;
+}
+
+div.header {
+    background-image: url('images/corne.png');
+    background-position: 120px 0px;
+    background-repeat: no-repeat;
+    width: 700px;
+    height: 400px;
+    margin-top: 50px;
+    float: left;
+}
+
+div.header div.header-body {
+    margin-left: 375px;
+}
+
+div.header div.header-body h1.logo {
+    background-image: url('images/soundifylogo.png');
+    background-repeat: no-repeat;
+    background-position: bottom left;
+    width: 200px;
+    height: 84px;
+    padding: 0px;
+}
+
+h2 {
+    width: 220px;
+    color: #808080;
+}
+
+div.caption {
+    width: 250px;
+    line-height: 1.4em;
+    font-size: 1.2em;
+    color: #4D4D4D;
+}
+
+div.body {
+    clear:left;
+    width: 368px;
+    margin: auto;
+}
+
+p {
+    width: 368px;
+    margin: auto;
+    margin-top: 20px;
+}
+
+div.body div.search-icon {
+    width: 75px;
+    height: 74px;
+    background-image: url('images/searchicon.png');
+    background-repeat: no-repeat;
+    margin-left: 147px;
+}
+
+div.body h1 {
+    background-color: #9cbe2d;
+    color: white;
+    padding: 10px 20px 10px 20px;
+    font-weight: normal;
+    margin-bottom: 0px;
+}
+
+div.body ul {
+    background-color: #f2f2f2;
+    margin: 0px;
+    padding: 20px;
+    color: #666;
+}
+
+div.body ul li {
+    list-style-type: none;
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+
+div.body ul li.selected {
+    font-weight: bold;
+}
+
+div.body ul li:hover{
+    color: #2B2B2B;
+}
+
+div.create {
+    background-color: #D8D8D8;
+    padding: 20px;
+}
+
+input.field {
+    color: #AAA;
+    border: 0px;
+    width: 100%;
+    height: 30px;
+}
+input.field:focus {
+    color: #2B2B2B;
+}
+
+div.logs {
+    clear: both;
+}
+
+div.progress-bar {
+    margin: auto;
+    position: relative;
+    height: 40px;
+    width: 368px;
+    background-color: #F2F2F2;
+    margin-top: 1px;
+}
+
+div.progress-bar .cursor {
+    position: absolute;
+    width: 100%;
+    height: 40px;
+    padding: 10px 0px 10px 20px;
+    background-color: #9cbe2d;
+    color: white;
+    overflow: hidden;
+    white-space: nowrap;
+    -webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+    -moz-box-sizing: border-box;    /* Firefox, other Gecko */
+    box-sizing: border-box;         /* Opera/IE 8+ */
+}
+div.progress-bar .label {
+    position: absolute;
+    width: 100%;
+    height: 40px;
+    padding: 10px 0px 10px 20px;
+    color: black;
+    top: 0px;
+    overflow: hidden;
+    white-space: nowrap;
+    -webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+    -moz-box-sizing: border-box;    /* Firefox, other Gecko */
+    box-sizing: border-box;         /* Opera/IE 8+ */
+}
+
+
+div#synchro-progress .cursor {
+    background-color: #2CBF4A;
+}
+
+div#startplaying-progress .cursor {
+    background-color: #2CA2BF;
+}
